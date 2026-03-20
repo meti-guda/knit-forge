@@ -24,7 +24,6 @@ export default function RowCounterPage() {
      const [newName, setNewName] = useState("");
      const [modal, setModal] = useState<ModalState>({ visible: false, message: "" });
 
-     // After mount, load from localStorage
      useEffect(() => {
           const saved = localStorage.getItem("knitforge-counters");
           if (saved) {
@@ -33,7 +32,7 @@ export default function RowCounterPage() {
           setMounted(true);
      }, []);
 
-     // Persist to localStorage on every change (only after mount)
+
      useEffect(() => {
           if (!mounted) return;
           localStorage.setItem("knitforge-counters", JSON.stringify(counters));
@@ -182,7 +181,6 @@ export default function RowCounterPage() {
                     </div>
                </div>
 
-               {/* Modal notification */}
                {modal.visible && (
                     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
                          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full mx-4 text-center space-y-4">
