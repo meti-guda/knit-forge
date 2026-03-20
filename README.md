@@ -1,1 +1,1 @@
-# knit-forge
+Knitting tools platform
