@@ -3,6 +3,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 
 type PatternStep = {
      id: number;
@@ -46,7 +47,7 @@ const CONFETTI_COLORS = ["#f43f5e", "#fb923c", "#facc15", "#4ade80", "#60a5fa", 
 
 function Confetti() {
      return (
-          <div className="pointer-events-none fixed inset-1 z-150 overflow-hidden">
+          <div className="pointer-events-none fixed inset-0 z-100 overflow-hidden">
                {Array.from({ length: 60 }).map((_, i) => {
                     const left = `${Math.random() * 100}%`;
                     const delay = `${Math.random() * 1.5}s`;
@@ -105,14 +106,12 @@ export default function SamplePatternPage() {
 
      const goNext = () => {
           const idx = PATTERN.steps.findIndex((s) => s.id === currentId);
-          if (!doneIds.includes(currentId)) {
-               const newDone = [...doneIds, currentId];
-               setDoneIds(newDone);
-               if (currentId === LAST_ID) {
-                    setShowCelebration(true);
-                    return;
-               }
-          } else if (currentId === LAST_ID) {
+          const newDone = doneIds.includes(currentId)
+               ? doneIds
+               : [...doneIds, currentId];
+          setDoneIds(newDone);
+
+          if (currentId === LAST_ID) {
                setShowCelebration(true);
                return;
           }
@@ -123,7 +122,11 @@ export default function SamplePatternPage() {
 
      const goPrev = () => {
           const idx = PATTERN.steps.findIndex((s) => s.id === currentId);
-          if (idx > 0) setCurrentId(PATTERN.steps[idx - 1].id);
+          if (idx > 0) {
+               const prevId = PATTERN.steps[idx - 1].id;
+               setDoneIds((prev) => prev.filter((d) => d !== prevId));
+               setCurrentId(prevId);
+          }
      };
 
      const jumpTo = (id: number) => setCurrentId(id);
@@ -151,17 +154,24 @@ export default function SamplePatternPage() {
 
      if (!mounted) {
           return (
-               <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+               <main className="min-h-screen bg-gray-100 flex items-center justify-center">
                     <p className="text-gray-400">Loading...</p>
                </main>
           );
      }
 
      return (
-          <main className="min-h-screen bg-gray-100 p-6">
+          <main className="min-h-screen bg-gray-50 p-6">
                <div className="max-w-2xl mx-auto space-y-5">
 
-                    <div className="bg-white rounded-2xl shadow p-5">
+                    <Link
+                         href="/patterns"
+                         className="inline-flex items-center gap-1 text-sm text-shadow-sm text-gray-400 hover:text-rose-500"
+                    >
+                         ← Back to patterns
+                    </Link>
+
+                    <div className="bg-white rounded-2xl  shadow-md shadow-rose-300 p-5">
                          <div className="flex justify-between items-start">
                               <div>
                                    <h1 className="text-2xl font-bold text-rose-600">{PATTERN.title}</h1>
@@ -187,7 +197,7 @@ export default function SamplePatternPage() {
 
                          <button
                               onClick={() => setShowMaterials((v) => !v)}
-                              className="mt-3 text-sm text-rose-600 hover:underline"
+                              className="mt-5 text-sm text-rose-400 hover:underline"
                          >
                               {showMaterials ? "Hide materials ▲" : "Show materials ▼"}
                          </button>
@@ -204,7 +214,7 @@ export default function SamplePatternPage() {
 
                     {Object.entries(sections).map(([section, steps]) => (
                          <div key={section}>
-                              <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-2 px-1">
+                              <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-500 mt-4 mb-2 px-1">
                                    {section}
                               </h2>
                               <div className="space-y-2">
@@ -216,12 +226,12 @@ export default function SamplePatternPage() {
                                                   key={step.id}
                                                   onClick={() => jumpTo(step.id)}
                                                   className={[
-                                                       "cursor-pointer rounded-2xl border p-4 flex gap-3 items-start transition-all",
+                                                       "cursor-pointer rounded-2xl border p-4 flex gap-3 items-start transition-all shadow-sm ",
                                                        isCurrent
                                                             ? "border-rose-500 bg-rose-50"
                                                             : isDone
-                                                                 ? "border-gray-200 bg-gray-50 opacity-90"
-                                                                 : "border-gray-200 bg-white hover:bg-gray-50",
+                                                                 ? "border-gray-200 bg-gray-100 opacity-70"
+                                                                 : "border-gray-200 bg-white hover:bg-rose-50 hover:border-rose-200",
                                                   ].join(" ")}
                                              >
                                                   <button
@@ -230,7 +240,7 @@ export default function SamplePatternPage() {
                                                             toggleDone(step.id);
                                                        }}
                                                        className={[
-                                                            "min-w-[28px] h-7 rounded-full text-xs font-mono font-bold flex items-center justify-center border",
+                                                            "min-w-7 h-7 rounded-full text-xs text-shadow-sm font-mono font-bold flex items-center justify-center border ",
                                                             isDone
                                                                  ? "bg-rose-500 border-rose-500 text-white"
                                                                  : "border-gray-300 text-gray-400",
@@ -246,17 +256,17 @@ export default function SamplePatternPage() {
 
                                                        {isCurrent && (
                                                             <div className="flex items-center gap-2 mt-2">
-                                                                 <span className="text-[11px] text-rose-500">← You are here</span>
+                                                                 <span className="text-sm text-rose-500">← You are here</span>
                                                                  <div className="flex gap-2 ml-auto">
                                                                       <button
                                                                            onClick={(e) => { e.stopPropagation(); goPrev(); }}
-                                                                           className="px-3 py-1 rounded-lg bg-gray-300 text-white text-xs font-semibold hover:bg-gray-400"
+                                                                           className="px-3 py-1 rounded-lg bg-gray-300 text-white text-shadow-md text-xs font-semibold hover:bg-gray-400 border border-gray-400"
                                                                       >
                                                                            ← Prev
                                                                       </button>
                                                                       <button
                                                                            onClick={(e) => { e.stopPropagation(); goNext(); }}
-                                                                           className="px-3 py-1 rounded-lg bg-rose-500 text-white text-xs font-semibold hover:bg-rose-600"
+                                                                           className="px-3 py-1 rounded-lg bg-rose-400 text-white text-shadow-md text-xs font-semibold hover:bg-rose-600 border border-rose-500"
                                                                       >
                                                                            {step.id === LAST_ID ? "Finish 🎉" : "Next →"}
                                                                       </button>
@@ -278,25 +288,31 @@ export default function SamplePatternPage() {
                     <>
                          <Confetti />
                          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                              <div className="bg-white rounded-3xl shadow-2xl p-10 max-w-sm w-full mx-4 text-center space-y-4 animate-bounce-once">
+                              <div className="bg-white rounded-3xl shadow-2xl p-10 max-w-sm w-full mx-4 text-center space-y-4">
                                    <div className="text-6xl">🎉</div>
                                    <h2 className="text-2xl font-bold text-rose-600">Pattern Complete!</h2>
                                    <p className="text-gray-600 text-sm">
                                         You finished <span className="font-semibold">{PATTERN.title}</span>. Amazing work! Your scarf is done. 🧶
                                    </p>
-                                   <div className="flex gap-3 justify-center pt-2">
+                                   <div className="flex flex-col gap-3 pt-2">
                                         <button
                                              onClick={() => setShowCelebration(false)}
                                              className="px-5 py-2 rounded-xl bg-gray-100 text-gray-600 text-sm hover:bg-gray-200"
                                         >
-                                             View pattern
+                                             View completed pattern
                                         </button>
                                         <button
                                              onClick={resetProgress}
+                                             className="px-5 py-2 rounded-xl bg-rose-100 text-rose-600 text-sm hover:bg-rose-200"
+                                        >
+                                             Start this pattern over
+                                        </button>
+                                        <Link
+                                             href="/patterns"
                                              className="px-5 py-2 rounded-xl bg-rose-500 text-white text-sm hover:bg-rose-600"
                                         >
-                                             Start over
-                                        </button>
+                                             Back to all patterns
+                                        </Link>
                                    </div>
                               </div>
                          </div>
