@@ -1,47 +1,12 @@
-/* eslint-disable react-hooks/purity */
 /* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable react-hooks/purity */
 "use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-
-type PatternStep = {
-     id: number;
-     section: string;
-     instruction: string;
-};
-
-const PATTERN: {
-     title: string;
-     description: string;
-     materials: string[];
-     steps: PatternStep[];
-} = {
-     title: "Simple Garter Scarf",
-     description: "A beginner-friendly garter stitch scarf. Great for practicing row tracking.",
-     materials: [
-          "100g DK weight yarn",
-          "4.5mm knitting needles",
-          "Scissors + yarn needle",
-     ],
-     steps: [
-          { id: 1, section: "Cast On", instruction: "Make a slip knot and cast on 40 stitches using the long-tail cast on method." },
-          { id: 2, section: "Cast On", instruction: "Check your stitch count: you should have 40 stitches on your needle." },
-          { id: 3, section: "Body", instruction: "Row 1 (RS): Knit all 40 stitches to end of row." },
-          { id: 4, section: "Body", instruction: "Row 2 (WS): Knit all 40 stitches to end of row." },
-          { id: 5, section: "Body", instruction: "Row 3: Knit all 40 stitches." },
-          { id: 6, section: "Body", instruction: "Row 4: Knit all 40 stitches." },
-          { id: 7, section: "Body", instruction: "Continue in garter stitch (knit every row) until piece measures 140 cm from cast on edge." },
-          { id: 8, section: "Body", instruction: "Check length: lay flat and measure. Adjust by knitting more rows if needed." },
-          { id: 9, section: "Finishing", instruction: "Cast off loosely: knit 2 sts, pass first stitch over second. Repeat to end." },
-          { id: 10, section: "Finishing", instruction: "Cut yarn leaving a 15 cm tail. Pull tail through last stitch and tighten." },
-          { id: 11, section: "Finishing", instruction: "Weave in ends using a yarn needle. Block if desired." },
-     ],
-};
-
-const STORAGE_KEY = "knitforge-pattern-sample-progress";
-const TOTAL = PATTERN.steps.length;
-const LAST_ID = PATTERN.steps[TOTAL - 1].id;
+import { useParams } from "next/navigation";
+import { getPatternBySlug } from "@/app/lib/patterns";
+import type { Pattern } from "@/app/lib/patterns";
 
 const CONFETTI_COLORS = ["#f43f5e", "#fb923c", "#facc15", "#4ade80", "#60a5fa", "#c084fc"];
 
@@ -80,7 +45,15 @@ function Confetti() {
      );
 }
 
-export default function SamplePatternPage() {
+export default function PatternPage() {
+     const params = useParams();
+     const slug = typeof params.slug === "string" ? params.slug : "";
+     const pattern: Pattern | undefined = getPatternBySlug(slug);
+
+     const STORAGE_KEY = `knitforge-pattern-${slug}-progress`;
+     const TOTAL = pattern?.steps.length ?? 0;
+     const LAST_ID = pattern?.steps[TOTAL - 1]?.id ?? 0;
+
      const [mounted, setMounted] = useState(false);
      const [currentId, setCurrentId] = useState<number>(1);
      const [doneIds, setDoneIds] = useState<number[]>([]);
@@ -95,35 +68,51 @@ export default function SamplePatternPage() {
                setDoneIds(parsed.doneIds ?? []);
           }
           setMounted(true);
-     }, []);
+     }, [STORAGE_KEY]);
 
      useEffect(() => {
           if (!mounted) return;
           localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentId, doneIds }));
-     }, [currentId, doneIds, mounted]);
+     }, [currentId, doneIds, mounted, STORAGE_KEY]);
+
+     if (!mounted) {
+          return (
+               <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+                    <p className="text-gray-400">Loading...</p>
+               </main>
+          );
+     }
+
+     if (!pattern) {
+          return (
+               <main className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
+                    <p className="text-gray-500">Pattern not found.</p>
+                    <Link href="/patterns" className="text-rose-500 hover:underline text-sm">
+                         ← Back to patterns
+                    </Link>
+               </main>
+          );
+     }
 
      const progress = Math.round((doneIds.length / TOTAL) * 100);
 
      const goNext = () => {
-          const idx = PATTERN.steps.findIndex((s) => s.id === currentId);
-          const newDone = doneIds.includes(currentId)
-               ? doneIds
-               : [...doneIds, currentId];
+          const idx = pattern.steps.findIndex((s) => s.id === currentId);
+          const newDone = doneIds.includes(currentId) ? doneIds : [...doneIds, currentId];
           setDoneIds(newDone);
-
           if (currentId === LAST_ID) {
                setShowCelebration(true);
                return;
           }
-          if (idx < PATTERN.steps.length - 1) {
-               setCurrentId(PATTERN.steps[idx + 1].id);
+          if (idx < pattern.steps.length - 1) {
+               setCurrentId(pattern.steps[idx + 1].id);
           }
      };
 
      const goPrev = () => {
-          const idx = PATTERN.steps.findIndex((s) => s.id === currentId);
+          const idx = pattern.steps.findIndex((s) => s.id === currentId);
           if (idx > 0) {
-               const prevId = PATTERN.steps[idx - 1].id;
+               const prevId = pattern.steps[idx - 1].id;
                setDoneIds((prev) => prev.filter((d) => d !== prevId));
                setCurrentId(prevId);
           }
@@ -143,7 +132,7 @@ export default function SamplePatternPage() {
           setShowCelebration(false);
      };
 
-     const sections = PATTERN.steps.reduce<Record<string, PatternStep[]>>(
+     const sections = pattern.steps.reduce<Record<string, typeof pattern.steps>>(
           (acc, step) => {
                if (!acc[step.section]) acc[step.section] = [];
                acc[step.section].push(step);
@@ -152,30 +141,19 @@ export default function SamplePatternPage() {
           {}
      );
 
-     if (!mounted) {
-          return (
-               <main className="min-h-screen bg-gray-100 flex items-center justify-center">
-                    <p className="text-gray-400">Loading...</p>
-               </main>
-          );
-     }
-
      return (
-          <main className="min-h-screen bg-gray-50 p-6">
+          <main className="min-h-screen bg-gray-100 p-6">
                <div className="max-w-2xl mx-auto space-y-5">
 
-                    <Link
-                         href="/patterns"
-                         className="inline-flex items-center gap-1 text-sm text-shadow-sm text-gray-400 hover:text-rose-500"
-                    >
+                    <Link href="/patterns" className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-rose-500">
                          ← Back to patterns
                     </Link>
 
-                    <div className="bg-white rounded-2xl  shadow-md shadow-rose-200 p-5">
+                    <div className="bg-white rounded-2xl shadow-lg shadow-rose-200 p-5">
                          <div className="flex justify-between items-start">
                               <div>
-                                   <h1 className="text-2xl font-bold text-rose-600">{PATTERN.title}</h1>
-                                   <p className="text-md text-gray-500 mt-2">{PATTERN.description}</p>
+                                   <h1 className="text-2xl font-bold text-rose-600">{pattern.title}</h1>
+                                   <p className="text-md text-gray-500 mt-2">{pattern.description}</p>
                               </div>
                               <button onClick={resetProgress} className="text-sm text-gray-400 hover:text-red-500">
                                    Reset
@@ -197,13 +175,13 @@ export default function SamplePatternPage() {
 
                          <button
                               onClick={() => setShowMaterials((v) => !v)}
-                              className="mt-5 text-sm text-rose-400 hover:underline"
+                              className="mt-3 text-sm text-rose-600 hover:underline"
                          >
                               {showMaterials ? "Hide materials ▲" : "Show materials ▼"}
                          </button>
                          {showMaterials && (
                               <ul className="mt-2 space-y-1">
-                                   {PATTERN.materials.map((m, i) => (
+                                   {pattern.materials.map((m, i) => (
                                         <li key={i} className="text-sm text-gray-600 flex gap-2">
                                              <span className="text-rose-400">•</span> {m}
                                         </li>
@@ -214,7 +192,7 @@ export default function SamplePatternPage() {
 
                     {Object.entries(sections).map(([section, steps]) => (
                          <div key={section}>
-                              <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-500 mt-4 mb-2 px-1">
+                              <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-2 px-1">
                                    {section}
                               </h2>
                               <div className="space-y-2">
@@ -226,24 +204,19 @@ export default function SamplePatternPage() {
                                                   key={step.id}
                                                   onClick={() => jumpTo(step.id)}
                                                   className={[
-                                                       "cursor-pointer rounded-2xl border p-4 flex gap-3 items-start transition-all shadow-sm ",
+                                                       "cursor-pointer rounded-2xl border p-4 flex gap-3 items-start transition-all shadow-sm",
                                                        isCurrent
                                                             ? "border-rose-500 bg-rose-50"
                                                             : isDone
-                                                                 ? "border-gray-200 bg-gray-100 opacity-70"
-                                                                 : "border-gray-200 bg-white hover:bg-rose-50 hover:border-rose-200",
+                                                                 ? "border-gray-200 bg-gray-50 opacity-90"
+                                                                 : "border-gray-200 bg-white hover:bg-rose-50 hover:border-rose-300",
                                                   ].join(" ")}
                                              >
                                                   <button
-                                                       onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            toggleDone(step.id);
-                                                       }}
+                                                       onClick={(e) => { e.stopPropagation(); toggleDone(step.id); }}
                                                        className={[
-                                                            "min-w-7 h-7 rounded-full text-xs text-shadow-sm font-mono font-bold flex items-center justify-center border ",
-                                                            isDone
-                                                                 ? "bg-rose-500 border-rose-500 text-white"
-                                                                 : "border-gray-300 text-gray-400",
+                                                            "min-w-7 h-7 rounded-full text-sm font-mono font-bold flex items-center justify-center border",
+                                                            isDone ? "bg-rose-500 border-rose-500 text-white" : "border-gray-300 text-gray-400",
                                                        ].join(" ")}
                                                   >
                                                        {isDone ? "✓" : step.id}
@@ -253,20 +226,19 @@ export default function SamplePatternPage() {
                                                        <p className={["text-sm", isDone ? "line-through text-gray-400" : "text-gray-800"].join(" ")}>
                                                             {step.instruction}
                                                        </p>
-
                                                        {isCurrent && (
                                                             <div className="flex items-center gap-2 mt-2">
                                                                  <span className="text-sm text-rose-500">← You are here</span>
                                                                  <div className="flex gap-2 ml-auto">
                                                                       <button
                                                                            onClick={(e) => { e.stopPropagation(); goPrev(); }}
-                                                                           className="px-3 py-1 rounded-lg bg-gray-300 text-white text-shadow-md text-xs font-semibold hover:bg-gray-400 border border-gray-400"
+                                                                           className="px-3 py-1 rounded-lg bg-gray-300 border border-gray-400 shadow-sm text-shadow-md text-white text-xs font-semibold hover:bg-gray-400"
                                                                       >
                                                                            ← Prev
                                                                       </button>
                                                                       <button
                                                                            onClick={(e) => { e.stopPropagation(); goNext(); }}
-                                                                           className="px-3 py-1 rounded-lg bg-rose-400 text-white text-shadow-md text-xs font-semibold hover:bg-rose-600 border border-rose-500"
+                                                                           className="px-3 py-1 rounded-lg bg-rose-400 border border-rose-500 text-white text-xs  font-semibold shadow-sm text-shadow-md hover:bg-rose-500"
                                                                       >
                                                                            {step.id === LAST_ID ? "Finish 🎉" : "Next →"}
                                                                       </button>
@@ -292,7 +264,7 @@ export default function SamplePatternPage() {
                                    <div className="text-6xl">🎉</div>
                                    <h2 className="text-2xl font-bold text-rose-600">Pattern Complete!</h2>
                                    <p className="text-gray-600 text-sm">
-                                        You finished <span className="font-semibold">{PATTERN.title}</span>. Amazing work! Your scarf is done. 🧶
+                                        You finished <span className="font-semibold">{pattern.title}</span>. Amazing work! 🧶
                                    </p>
                                    <div className="flex flex-col gap-3 pt-2">
                                         <button
@@ -309,7 +281,7 @@ export default function SamplePatternPage() {
                                         </button>
                                         <Link
                                              href="/patterns"
-                                             className="px-5 py-2 rounded-xl bg-rose-500 text-white text-sm hover:bg-rose-600"
+                                             className="px-5 py-2 rounded-xl bg-rose-500 text-white text-sm hover:bg-rose-600 text-center"
                                         >
                                              Back to all patterns
                                         </Link>
