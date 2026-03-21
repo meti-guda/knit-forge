@@ -171,7 +171,7 @@ export default function SamplePatternPage() {
                          ← Back to patterns
                     </Link>
 
-                    <div className="bg-white rounded-2xl  shadow-md shadow-rose-300 p-5">
+                    <div className="bg-white rounded-2xl  shadow-md shadow-rose-200 p-5">
                          <div className="flex justify-between items-start">
                               <div>
                                    <h1 className="text-2xl font-bold text-rose-600">{PATTERN.title}</h1>
