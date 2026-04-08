@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Navbar from "@/components/ui/Navbar";
+import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 
 export const metadata: Metadata = {
   title: "KnitForge | Your All-in-One Knitting Studio",
@@ -11,6 +12,11 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
     apple: "/icons/icon-192.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "KnitForge",
   },
 };
 
@@ -30,6 +36,7 @@ export default function RootLayout({
       <body className="antialiased min-h-screen">
         <Navbar />
         <main>{children}</main>
+        <ServiceWorkerRegistration />
       </body>
     </html>
   );
